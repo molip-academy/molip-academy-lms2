@@ -64,6 +64,9 @@ public class SecurityConfig {
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authorizeHttpRequests(auth -> auth
 						.requestMatchers("/h2-console/**").permitAll()
+						// API 문서 경로. springdoc이 꺼진 프로파일에서는 핸들러 자체가 등록되지 않아
+						// 이 허용이 있어도 문서가 나가지 않는다(포워딩된 /error가 401을 낸다).
+						.requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/v1/csrf").permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/v1/members").permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()

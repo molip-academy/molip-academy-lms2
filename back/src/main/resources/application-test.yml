@@ -7,3 +7,19 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    # Swagger UI가 XSRF-TOKEN 쿠키를 읽어 X-XSRF-TOKEN 헤더로 되돌려준다.
+    # 이게 없으면 Try it out의 PUT/DELETE가 전부 403이 된다.
+    csrf:
+      enabled: true
+      cookie-name: XSRF-TOKEN
+      header-name: X-XSRF-TOKEN
+    tags-sorter: alpha
+    display-request-duration: true
