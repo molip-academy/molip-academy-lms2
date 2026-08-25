@@ -15,16 +15,18 @@ export const MOOD_LABELS: Record<Mood, string> = {
 };
 
 /**
- * 달력 셀 배경. 색은 기분을 **덧붙여** 알려줄 뿐이고, 일지를 썼는지 여부는
- * 색이 아니라 칠해진 배경과 굵은 글씨로 구분된다 — 색만으로 정보를 전달하지 않는다.
+ * 달력에서 날짜 아래에 찍는 점의 색. macOS 캘린더가 일정 있는 날을 표시하는 방식이다.
+ *
+ * 작성 여부는 **점의 유무**로, 기분은 **점의 색**으로 나타낸다. 색을 구분하지 못해도
+ * 썼는지 안 썼는지는 알 수 있으므로, 색만으로 정보를 전달하지 않는다.
  */
-export const MOOD_CELL: Record<Mood, string> = {
-  VERY_GOOD: "bg-emerald-600 text-white",
-  GOOD: "bg-emerald-300 text-emerald-950",
-  NORMAL: "bg-slate-300 text-slate-900 dark:bg-slate-600 dark:text-slate-50",
-  BAD: "bg-amber-300 text-amber-950",
-  VERY_BAD: "bg-rose-400 text-white",
+export const MOOD_DOT: Record<Mood, string> = {
+  VERY_GOOD: "bg-emerald-600",
+  GOOD: "bg-emerald-400",
+  NORMAL: "bg-slate-400",
+  BAD: "bg-amber-500",
+  VERY_BAD: "bg-rose-500",
 };
 
 /** 일지는 썼지만 기분상태를 고르지 않은 날. */
-export const MOOD_CELL_NONE = "bg-muted-foreground/25 text-foreground";
+export const MOOD_DOT_NONE = "bg-muted-foreground/70";

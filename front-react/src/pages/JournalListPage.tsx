@@ -12,7 +12,7 @@ import {
   todayIso,
   weekdayIndex,
 } from "@/lib/date";
-import { MOOD_CELL, MOOD_CELL_NONE, MOOD_LABELS } from "@/lib/mood";
+import { MOOD_DOT, MOOD_DOT_NONE, MOOD_LABELS } from "@/lib/mood";
 import { formatMinutes } from "@/lib/time";
 import type { JournalSummary } from "@/lib/types";
 import { AppHeader } from "@/components/AppHeader";
@@ -163,9 +163,8 @@ function DayCell({
 }) {
   const { day, isWeekend } = formatDay(date);
 
-  // 쓴 날은 배경이 칠해지고 글씨가 굵다. 색은 기분을 덧붙일 뿐이라
-  // 색을 구분하지 못해도 작성 여부는 알 수 있다.
-  const filled = summary ? (summary.mood ? MOOD_CELL[summary.mood] : MOOD_CELL_NONE) : "";
+  // 작성 여부는 점의 유무로, 기분은 점의 색으로 나타낸다 (macOS 캘린더 방식).
+  const dot = summary ? (summary.mood ? MOOD_DOT[summary.mood] : MOOD_DOT_NONE) : "bg-transparent";
 
   const label = summary
     ? `${day}일 · ${summary.mood ? MOOD_LABELS[summary.mood] : "기록 있음"}`
@@ -177,11 +176,23 @@ function DayCell({
       onClick={onOpen}
       aria-label={label}
       title={label}
-      className={`relative flex aspect-square flex-col items-center justify-center rounded-lg text-sm transition
-        ${summary ? `font-bold ${filled}` : "text-muted-foreground/60 hover:bg-muted"}
-        ${isToday ? "ring-2 ring-emerald-600 ring-offset-1 ring-offset-background" : ""}`}
+      className="flex aspect-square flex-col items-center justify-center gap-1 rounded-lg text-sm transition hover:bg-muted"
     >
-      <span className={!summary && isWeekend ? "text-rose-400" : undefined}>{day}</span>
+      <span
+        className={`flex h-7 w-7 items-center justify-center rounded-full tabular-nums ${
+          isToday
+            ? "bg-emerald-700 font-semibold text-white"
+            : summary
+              ? "font-semibold"
+              : isWeekend
+                ? "text-rose-400/70"
+                : "text-muted-foreground/60"
+        }`}
+      >
+        {day}
+      </span>
+      {/* 점이 없는 날에도 자리를 차지시켜, 쓴 날과 안 쓴 날의 숫자 위치가 어긋나지 않게 한다 */}
+      <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
     </button>
   );
 }
