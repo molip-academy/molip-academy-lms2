@@ -110,6 +110,41 @@ public final class JournalDtos {
 		}
 	}
 
+	/**
+	 * 목록 한 줄. 본문이 최대 10,000자라 한 달치를 통째로 내리면 무거우므로,
+	 * 목록에서 알고 싶은 것(그날 어땠나)만 담는다.
+	 */
+	@Schema(description = "몰입일지 요약. 목록 화면용이며 본문 전문은 담기지 않는다.")
+	public record JournalSummary(
+			@Schema(description = "일지 날짜", example = "2026-08-21") LocalDate journalDate,
+			@Schema(description = "기분상태", example = "GOOD") Mood mood,
+			@Schema(description = "공부시간(분)", example = "320") Integer studyMinutes,
+
+			@Schema(description = "본문 첫 줄을 잘라낸 미리보기. 본문이 비었으면 `null`.",
+					example = "오늘은 몰입 주제를 붙들고 천천히 생각해 보았습니다.")
+			String preview) {
+
+		private static final int PREVIEW_LENGTH = 60;
+
+		public static JournalSummary from(Journal journal) {
+			return new JournalSummary(
+					journal.getJournalDate(),
+					journal.getMood(),
+					journal.getStudyMinutes(),
+					preview(journal.getContent()));
+		}
+
+		private static String preview(String content) {
+			if (content == null || content.isBlank()) {
+				return null;
+			}
+			String firstLine = content.lines().findFirst().orElse("").strip();
+			return firstLine.length() <= PREVIEW_LENGTH
+					? firstLine
+					: firstLine.substring(0, PREVIEW_LENGTH) + "…";
+		}
+	}
+
 	/** 일지가 없는 날짜는 에러가 아니라 "없음"이다. */
 	@Schema(description = "날짜 조회 결과. 일지가 없는 날짜도 정상 응답이다.")
 	public record JournalLookupResponse(

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/auth/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label";
 
 export function LoginPage() {
   const { login } = useAuth();
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -21,8 +20,8 @@ export function LoginPage() {
     setMessage(null);
     setSubmitting(true);
     try {
+      // 로그인이 끝나면 RedirectIfAuthed가 목적지로 보낸다. 여기서 또 정하지 않는다.
       await login(username, password);
-      navigate("/");
     } catch (error) {
       setMessage(error instanceof ApiError ? error.message : "요청을 처리하지 못했습니다.");
     } finally {

@@ -26,3 +26,10 @@ export type JournalLookup = {
   exists: boolean;
   journal: Journal | null;
 };
+
+export type JournalSummary = {
+  journalDate: string;
+  mood: Mood | null;
+  studyMinutes: number | null;
+  preview: string | null;
+};

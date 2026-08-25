@@ -14,3 +14,13 @@ export function toHoursAndMinutes(total: number | null | undefined): { hours: st
   if (total === null || total === undefined) return { hours: "", minutes: "" };
   return { hours: String(Math.floor(total / 60)), minutes: String(total % 60) };
 }
+
+/** "465" -> "7시간 45분". 목록에서 한눈에 읽히도록. */
+export function formatMinutes(total: number | null | undefined): string {
+  if (total === null || total === undefined) return "—";
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  if (h === 0) return `${m}분`;
+  if (m === 0) return `${h}시간`;
+  return `${h}시간 ${m}분`;
+}

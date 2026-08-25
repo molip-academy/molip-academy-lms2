@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { ApiError, api } from "@/lib/api";
 import { MOODS, MOOD_LABELS } from "@/lib/mood";
 import type { Mood } from "@/lib/mood";
 import { toHoursAndMinutes, toMinutes } from "@/lib/time";
+import { todayIso } from "@/lib/date";
 import type { JournalLookup } from "@/lib/types";
 import { useAuth } from "@/auth/AuthContext";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -14,16 +15,12 @@ type Duration = { hours: string; minutes: string };
 
 const EMPTY_DURATION: Duration = { hours: "", minutes: "" };
 
-function today(): string {
-  const now = new Date();
-  const offset = now.getTimezoneOffset() * 60_000;
-  return new Date(now.getTime() - offset).toISOString().slice(0, 10);
-}
-
 export function JournalPage() {
   const { member, logout } = useAuth();
+  const navigate = useNavigate();
 
-  const [date, setDate] = useState(today());
+  // 날짜는 URL이 소유한다 (ADR 0002와 같은 모양). 그래서 북마크·공유·뒤로가기가 동작한다.
+  const { date = todayIso() } = useParams<{ date: string }>();
   const [sleep, setSleep] = useState<Duration>(EMPTY_DURATION);
   const [study, setStudy] = useState<Duration>(EMPTY_DURATION);
   const [exercise, setExercise] = useState<Duration>(EMPTY_DURATION);
@@ -88,8 +85,8 @@ export function JournalPage() {
   );
 
   useEffect(() => {
-    void load(today(), false);
-  }, [load]);
+    void load(date, false);
+  }, [load, date]);
 
   async function save() {
     setBusy(true);
@@ -130,6 +127,7 @@ export function JournalPage() {
       clearForm();
       setExists(false);
       setNotice({ tone: "ok", text: "삭제했습니다." });
+      navigate("/");
     } catch (error) {
       setNotice({ tone: "bad", text: error instanceof ApiError ? error.message : "삭제하지 못했습니다." });
     } finally {
@@ -142,6 +140,9 @@ export function JournalPage() {
       <header className="mb-6 flex items-center justify-between">
         <span className="text-sm text-muted-foreground">{member?.nickname}님</span>
         <div className="flex gap-2">
+          <Link to="/" className={buttonVariants({ variant: "ghost", size: "sm" })}>
+            목록
+          </Link>
           <Link to="/me" className={buttonVariants({ variant: "ghost", size: "sm" })}>
             내 정보
           </Link>
@@ -158,7 +159,7 @@ export function JournalPage() {
           <Input
             type="date"
             value={date}
-            onChange={(e) => setDate(e.target.value)}
+            onChange={(e) => e.target.value && navigate(`/journals/${e.target.value}`)}
             className="w-auto flex-1 min-w-45"
           />
           <Button onClick={() => void load(date, true)} disabled={busy} className="bg-emerald-700 hover:bg-emerald-800">

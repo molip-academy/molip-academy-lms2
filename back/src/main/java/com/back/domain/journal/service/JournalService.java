@@ -4,9 +4,13 @@ import com.back.domain.journal.dto.JournalDtos.SaveRequest;
 import com.back.domain.journal.entity.Journal;
 import com.back.domain.journal.repository.JournalRepository;
 import com.back.domain.member.entity.Member;
+import com.back.global.exception.ServiceException;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -15,8 +19,26 @@ public class JournalService {
 
 	private final JournalRepository journalRepository;
 
+	/** 한 번에 조회할 수 있는 기간의 상한. 목록 화면은 한 달이면 충분하다. */
+	private static final long MAX_RANGE_DAYS = 366;
+
 	public Optional<Journal> find(Member member, LocalDate journalDate) {
 		return journalRepository.findByMemberAndJournalDate(member, journalDate);
+	}
+
+	/**
+	 * 기간 안에 실제로 존재하는 일지만 돌려준다. 안 쓴 날을 채우는 일은 화면의 몫이다 —
+	 * 서버가 빈 날까지 만들어 내리면 페이로드만 커지고 아무 정보도 늘지 않는다.
+	 */
+	public List<Journal> findRange(Member member, LocalDate from, LocalDate to) {
+		if (from.isAfter(to)) {
+			throw new ServiceException(HttpStatus.BAD_REQUEST, "from", "시작일이 종료일보다 늦을 수 없습니다.");
+		}
+		if (ChronoUnit.DAYS.between(from, to) >= MAX_RANGE_DAYS) {
+			throw new ServiceException(HttpStatus.BAD_REQUEST, "to",
+					"한 번에 조회할 수 있는 기간은 %d일까지입니다.".formatted(MAX_RANGE_DAYS));
+		}
+		return journalRepository.findByMemberAndJournalDateBetweenOrderByJournalDateAsc(member, from, to);
 	}
 
 	/**

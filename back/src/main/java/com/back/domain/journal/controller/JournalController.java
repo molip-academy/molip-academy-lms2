@@ -2,6 +2,7 @@ package com.back.domain.journal.controller;
 
 import com.back.domain.journal.dto.JournalDtos.JournalLookupResponse;
 import com.back.domain.journal.dto.JournalDtos.JournalResponse;
+import com.back.domain.journal.dto.JournalDtos.JournalSummary;
 import com.back.domain.journal.dto.JournalDtos.SaveRequest;
 import com.back.domain.journal.service.JournalService;
 import com.back.domain.member.entity.Member;
@@ -12,6 +13,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +23,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -37,6 +40,32 @@ public class JournalController {
 
 	private final JournalService journalService;
 	private final MemberService memberService;
+
+	@Operation(
+			summary = "기간 안의 몰입일지를 요약해 나열한다",
+			description = """
+					목록 화면용이다. **그 기간에 실제로 존재하는 일지만** 돌아오며, 일지를 쓰지 않은 \
+					날짜는 응답에 없다 — 빈 날을 채워 보여주는 일은 화면의 몫이다.
+
+					본문 전문 대신 첫 줄 미리보기만 담긴다. 전문이 필요하면 `GET /api/v1/journals/{date}`로 \
+					하나씩 읽는다.
+
+					한 번에 조회할 수 있는 기간은 366일까지다.
+					""")
+	@GetMapping
+	@Transactional(readOnly = true)
+	public List<JournalSummary> list(
+			@AuthenticationPrincipal MemberPrincipal principal,
+			@Parameter(description = "조회 시작일 (yyyy-MM-dd, 포함)", example = "2026-08-01")
+			@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+			@Parameter(description = "조회 종료일 (yyyy-MM-dd, 포함)", example = "2026-08-31")
+			@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+
+		Member member = memberService.getById(principal.id());
+		return journalService.findRange(member, from, to).stream()
+				.map(JournalSummary::from)
+				.toList();
+	}
 
 	@Operation(
 			summary = "그 날짜의 몰입일지를 읽는다",
