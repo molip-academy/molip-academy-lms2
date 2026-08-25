@@ -39,6 +39,13 @@ export function formatMonth(month: string): string {
   return `${y}년 ${m}월`;
 }
 
+/** 0=일 … 6=토. 달력 격자에서 1일 앞에 비워둘 칸 수를 정하는 데 쓴다. */
+export function weekdayIndex(iso: string): number {
+  return new Date(iso + "T00:00:00").getDay();
+}
+
+export const WEEKDAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"] as const;
+
 export function formatDay(iso: string): { day: string; weekday: string; isWeekend: boolean } {
   const date = new Date(iso + "T00:00:00");
   const weekdays = ["일", "월", "화", "수", "목", "금", "토"];

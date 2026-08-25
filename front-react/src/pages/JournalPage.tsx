@@ -222,31 +222,34 @@ export function JournalPage() {
                 error={errors.exerciseMinutes}
               />
 
-              <Row label="선잠횟수" unit="회" error={errors.napCount}>
-                <Input
-                  type="number"
-                  inputMode="numeric"
-                  min={0}
-                  value={form.napCount}
-                  onChange={(e) => update({ napCount: e.target.value })}
-                  placeholder="횟수"
-                  className="w-full min-w-0 sm:w-40"
-                />
-              </Row>
+              {/* 짧은 숫자 두 개가 각각 한 줄씩 차지할 이유가 없다. 좁은 화면에서만 나란히 놓는다. */}
+              <div className="grid grid-cols-2 gap-3 sm:block sm:space-y-4">
+                <Row label="선잠횟수" unit="회" error={errors.napCount}>
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    value={form.napCount}
+                    onChange={(e) => update({ napCount: e.target.value })}
+                    placeholder="횟수"
+                    className="w-full min-w-0 sm:w-40"
+                  />
+                </Row>
 
-              <Row label="1초원칙 준수" unit="%" error={errors.oneSecondRuleRate}>
-                <Input
-                  type="number"
-                  inputMode="decimal"
-                  step="0.1"
-                  min={0}
-                  max={100}
-                  value={form.rate}
-                  onChange={(e) => update({ rate: e.target.value })}
-                  placeholder="예: 95.5"
-                  className="w-full min-w-0 sm:w-40"
-                />
-              </Row>
+                <Row label="1초원칙" unit="%" error={errors.oneSecondRuleRate}>
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    step="0.1"
+                    min={0}
+                    max={100}
+                    value={form.rate}
+                    onChange={(e) => update({ rate: e.target.value })}
+                    placeholder="95.5"
+                    className="w-full min-w-0 sm:w-40"
+                  />
+                </Row>
+              </div>
 
               <Row label="기분상태">
                 <NativeSelect
@@ -263,21 +266,24 @@ export function JournalPage() {
                 </NativeSelect>
               </Row>
 
-              <YesNoRow
-                label="슬로싱킹"
-                value={form.slowThinking}
-                onChange={(slowThinking) => update({ slowThinking })}
-              />
-              <YesNoRow
-                label="취침전생각"
-                value={form.thoughtBeforeSleep}
-                onChange={(thoughtBeforeSleep) => update({ thoughtBeforeSleep })}
-              />
-              <YesNoRow
-                label="비타민복용"
-                value={form.vitaminTaken}
-                onChange={(vitaminTaken) => update({ vitaminTaken })}
-              />
+              {/* 예/아니오 세 개가 각각 한 줄을 차지하면 폼의 3분의 1이 선택지 세 개로 채워진다. */}
+              <div className="grid grid-cols-3 gap-2 sm:block sm:space-y-4">
+                <YesNoRow
+                  label="슬로싱킹"
+                  value={form.slowThinking}
+                  onChange={(slowThinking) => update({ slowThinking })}
+                />
+                <YesNoRow
+                  label="취침전생각"
+                  value={form.thoughtBeforeSleep}
+                  onChange={(thoughtBeforeSleep) => update({ thoughtBeforeSleep })}
+                />
+                <YesNoRow
+                  label="비타민복용"
+                  value={form.vitaminTaken}
+                  onChange={(vitaminTaken) => update({ vitaminTaken })}
+                />
+              </div>
             </div>
 
             <Textarea
@@ -303,13 +309,19 @@ export function JournalPage() {
         </p>
       )}
 
-      <Button
-        onClick={() => void save()}
-        disabled={busy || form === null}
-        className="mt-5 w-full bg-emerald-700 py-6 text-base hover:bg-emerald-800"
-      >
-        저장하기
-      </Button>
+      {/*
+        저장 버튼은 화면 하단에 붙어 있다. 폼이 한 화면을 넘기 때문에, 아래로 스크롤해야만
+        저장할 수 있으면 매일 쓰는 화면에서 그 스크롤이 매번 반복된다.
+      */}
+      <div className="sticky bottom-0 z-10 -mx-4 mt-5 border-t bg-background/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+        <Button
+          onClick={() => void save()}
+          disabled={busy || form === null}
+          className="w-full bg-emerald-700 py-6 text-base hover:bg-emerald-800"
+        >
+          저장하기
+        </Button>
+      </div>
 
       {/* 일지가 없는 날에는 지울 것이 없다 */}
       {exists && form !== null && (
@@ -342,25 +354,32 @@ function Row({
   label,
   unit,
   error,
+  compact,
   children,
 }: {
   label: string;
   unit?: string;
   error?: string;
+  /** 3열로 나란히 놓이는 행. 라벨이 좁아 글씨를 줄인다. */
+  compact?: boolean;
   children: React.ReactNode;
 }) {
   // 좁은 화면에서는 라벨을 입력 위로 쌓는다. 라벨(152px)과 컨트롤을 한 줄에 두면
   // 375px 폰의 카드 안쪽 가용 폭(303px)을 모든 행이 넘긴다.
   return (
-    <div>
-      <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-4">
-        <div className="font-semibold sm:w-38 sm:shrink-0">
+    <div className="min-w-0">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-4">
+        <div
+          className={`font-semibold sm:w-38 sm:shrink-0 sm:text-base ${
+            compact ? "truncate text-xs" : "text-sm"
+          }`}
+        >
           {label}
           {unit && <span className="ml-1 text-xs font-normal text-muted-foreground">({unit})</span>}
         </div>
-        <div className="flex w-full items-center gap-2 sm:w-auto">{children}</div>
+        <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">{children}</div>
       </div>
-      {error && <p className="mt-1 text-sm text-destructive sm:ml-38">{error}</p>}
+      {error && <p className="mt-1 text-xs text-destructive sm:ml-38 sm:text-sm">{error}</p>}
     </div>
   );
 }
@@ -412,8 +431,8 @@ function YesNoRow({
   onChange: (next: string) => void;
 }) {
   return (
-    <Row label={label}>
-      <NativeSelect value={value} onChange={onChange} className="w-full min-w-0 sm:w-48">
+    <Row label={label} compact>
+      <NativeSelect value={value} onChange={onChange} className="w-full min-w-0 px-2 sm:w-48 sm:px-3">
         {/* "아니오"와 "안 적음"은 다르다. 비워 두는 것이 기본값이다. */}
         <option value="">선택하지 않음</option>
         <option value="yes">예</option>
