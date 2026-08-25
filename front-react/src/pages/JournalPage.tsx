@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ApiError, api } from "@/lib/api";
 import { MOODS, MOOD_LABELS } from "@/lib/mood";
 import type { Mood } from "@/lib/mood";
 import { toHoursAndMinutes, toMinutes } from "@/lib/time";
 import { todayIso } from "@/lib/date";
-import type { JournalLookup } from "@/lib/types";
+import type { Journal, JournalLookup } from "@/lib/types";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,96 +15,140 @@ type Duration = { hours: string; minutes: string };
 
 const EMPTY_DURATION: Duration = { hours: "", minutes: "" };
 
+/**
+ * 폼 전체를 한 덩어리로 다룬다. 필드마다 useState를 두면 응답을 반영할 때 11번,
+ * 비울 때 또 11번 setter를 부르게 되고 "사용자가 손댔는지"를 기록할 자리도 없다.
+ */
+type FormState = {
+  sleep: Duration;
+  study: Duration;
+  exercise: Duration;
+  napCount: string;
+  rate: string;
+  mood: Mood | "";
+  slowThinking: string;
+  thoughtBeforeSleep: string;
+  vitaminTaken: string;
+  content: string;
+};
+
+const EMPTY_FORM: FormState = {
+  sleep: EMPTY_DURATION,
+  study: EMPTY_DURATION,
+  exercise: EMPTY_DURATION,
+  napCount: "",
+  rate: "",
+  mood: "",
+  slowThinking: "",
+  thoughtBeforeSleep: "",
+  vitaminTaken: "",
+  content: "",
+};
+
+function toForm(journal: Journal): FormState {
+  return {
+    sleep: toHoursAndMinutes(journal.sleepMinutes),
+    study: toHoursAndMinutes(journal.studyMinutes),
+    exercise: toHoursAndMinutes(journal.exerciseMinutes),
+    napCount: journal.napCount === null ? "" : String(journal.napCount),
+    rate: journal.oneSecondRuleRate === null ? "" : String(journal.oneSecondRuleRate),
+    mood: journal.mood ?? "",
+    slowThinking: toChoice(journal.slowThinking),
+    thoughtBeforeSleep: toChoice(journal.thoughtBeforeSleep),
+    vitaminTaken: toChoice(journal.vitaminTaken),
+    content: journal.content ?? "",
+  };
+}
+
 export function JournalPage() {
   const navigate = useNavigate();
 
   // 날짜는 URL이 소유한다 (ADR 0002와 같은 모양). 그래서 북마크·공유·뒤로가기가 동작한다.
   const { date = todayIso() } = useParams<{ date: string }>();
-  const [sleep, setSleep] = useState<Duration>(EMPTY_DURATION);
-  const [study, setStudy] = useState<Duration>(EMPTY_DURATION);
-  const [exercise, setExercise] = useState<Duration>(EMPTY_DURATION);
-  const [napCount, setNapCount] = useState("");
-  const [rate, setRate] = useState("");
-  const [mood, setMood] = useState<Mood | "">("");
-  const [slowThinking, setSlowThinking] = useState("");
-  const [thoughtBeforeSleep, setThoughtBeforeSleep] = useState("");
-  const [vitaminTaken, setVitaminTaken] = useState("");
-  const [content, setContent] = useState("");
+
+  // null이면 이 날짜를 아직 한 번도 못 불러온 상태다. 그동안은 스켈레톤을 그린다.
+  // 빈 폼을 먼저 보여주면 값이 "기본값에서 갑자기 다른 값으로" 바뀌는 것처럼 보인다.
+  const [form, setForm] = useState<FormState | null>(null);
+  const [dirty, setDirty] = useState(false);
 
   const [exists, setExists] = useState(false);
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState<{ tone: "ok" | "bad"; text: string } | null>(null);
 
-  const clearForm = useCallback(() => {
-    setSleep(EMPTY_DURATION);
-    setStudy(EMPTY_DURATION);
-    setExercise(EMPTY_DURATION);
-    setNapCount("");
-    setRate("");
-    setMood("");
-    setSlowThinking("");
-    setThoughtBeforeSleep("");
-    setVitaminTaken("");
-    setContent("");
+  /**
+   * 요청마다 번호를 매겨 가장 최근 것의 응답만 반영한다. 날짜를 빠르게 바꾸면 이전
+   * 날짜의 응답이 늦게 도착해 새 날짜 화면에 옛 데이터를 채워 넣을 수 있다.
+   */
+  const requestId = useRef(0);
+
+  function update(patch: Partial<FormState>) {
+    setDirty(true);
+    setForm((current) => ({ ...(current ?? EMPTY_FORM), ...patch }));
+  }
+
+  const load = useCallback(async (target: string, announce: boolean) => {
+    const id = ++requestId.current;
+    setBusy(true);
+    setErrors({});
+    if (announce) setNotice(null);
+
+    try {
+      const result = await api.get<JournalLookup>(`/api/v1/journals/${target}`);
+      if (id !== requestId.current) return; // 더 최신 요청이 이미 나갔다
+
+      setExists(result.exists);
+      setForm(result.journal ? toForm(result.journal) : EMPTY_FORM);
+      setDirty(false);
+
+      if (announce) {
+        setNotice({
+          tone: "ok",
+          text: result.exists ? "일지를 불러왔습니다." : "이 날짜에는 아직 일지가 없습니다.",
+        });
+      }
+    } catch (error) {
+      if (id !== requestId.current) return;
+      setForm((current) => current ?? EMPTY_FORM); // 스켈레톤에 갇히지 않게
+      setNotice({ tone: "bad", text: error instanceof ApiError ? error.message : "불러오지 못했습니다." });
+    } finally {
+      if (id === requestId.current) setBusy(false);
+    }
   }, []);
 
-  const load = useCallback(
-    async (target: string, announce: boolean) => {
-      setBusy(true);
-      setErrors({});
-      if (announce) setNotice(null);
-      try {
-        const result = await api.get<JournalLookup>(`/api/v1/journals/${target}`);
-        setExists(result.exists);
-        if (!result.exists || !result.journal) {
-          clearForm();
-          if (announce) setNotice({ tone: "ok", text: "이 날짜에는 아직 일지가 없습니다." });
-          return;
-        }
-        const j = result.journal;
-        setSleep(toHoursAndMinutes(j.sleepMinutes));
-        setStudy(toHoursAndMinutes(j.studyMinutes));
-        setExercise(toHoursAndMinutes(j.exerciseMinutes));
-        setNapCount(j.napCount === null ? "" : String(j.napCount));
-        setRate(j.oneSecondRuleRate === null ? "" : String(j.oneSecondRuleRate));
-        setMood(j.mood ?? "");
-        setSlowThinking(toChoice(j.slowThinking));
-        setThoughtBeforeSleep(toChoice(j.thoughtBeforeSleep));
-        setVitaminTaken(toChoice(j.vitaminTaken));
-        setContent(j.content ?? "");
-        if (announce) setNotice({ tone: "ok", text: "일지를 불러왔습니다." });
-      } catch (error) {
-        setNotice({ tone: "bad", text: error instanceof ApiError ? error.message : "불러오지 못했습니다." });
-      } finally {
-        setBusy(false);
-      }
-    },
-    [clearForm],
-  );
-
+  // 날짜가 바뀌면 스켈레톤으로 되돌린다. 이전 날짜의 값이 잠깐이라도 남아 있으면 안 된다.
   useEffect(() => {
+    setForm(null);
+    setDirty(false);
     void load(date, false);
   }, [load, date]);
 
+  /** `조회`는 "다시 불러와라"는 명시적 요청이다. 손댄 게 있을 때만 확인을 받는다. */
+  function reload() {
+    if (dirty && !window.confirm("저장하지 않은 입력이 있습니다. 불러온 내용으로 바꿀까요?")) return;
+    void load(date, true);
+  }
+
   async function save() {
+    if (!form) return;
     setBusy(true);
     setErrors({});
     setNotice(null);
     try {
       await api.put(`/api/v1/journals/${date}`, {
-        sleepMinutes: toMinutes(sleep.hours, sleep.minutes),
-        studyMinutes: toMinutes(study.hours, study.minutes),
-        exerciseMinutes: toMinutes(exercise.hours, exercise.minutes),
-        napCount: napCount === "" ? null : Number(napCount),
-        oneSecondRuleRate: rate === "" ? null : Number(rate),
-        mood: mood === "" ? null : mood,
-        slowThinking: fromChoice(slowThinking),
-        thoughtBeforeSleep: fromChoice(thoughtBeforeSleep),
-        vitaminTaken: fromChoice(vitaminTaken),
-        content: content === "" ? null : content,
+        sleepMinutes: toMinutes(form.sleep.hours, form.sleep.minutes),
+        studyMinutes: toMinutes(form.study.hours, form.study.minutes),
+        exerciseMinutes: toMinutes(form.exercise.hours, form.exercise.minutes),
+        napCount: form.napCount === "" ? null : Number(form.napCount),
+        oneSecondRuleRate: form.rate === "" ? null : Number(form.rate),
+        mood: form.mood === "" ? null : form.mood,
+        slowThinking: fromChoice(form.slowThinking),
+        thoughtBeforeSleep: fromChoice(form.thoughtBeforeSleep),
+        vitaminTaken: fromChoice(form.vitaminTaken),
+        content: form.content === "" ? null : form.content,
       });
       setExists(true);
+      setDirty(false);
       setNotice({ tone: "ok", text: "저장했습니다." });
     } catch (error) {
       if (error instanceof ApiError) {
@@ -123,7 +167,8 @@ export function JournalPage() {
     setBusy(true);
     try {
       await api.delete(`/api/v1/journals/${date}`);
-      clearForm();
+      setForm(EMPTY_FORM);
+      setDirty(false);
       setExists(false);
       setNotice({ tone: "ok", text: "삭제했습니다." });
       navigate("/");
@@ -148,63 +193,100 @@ export function JournalPage() {
             onChange={(e) => e.target.value && navigate(`/journals/${e.target.value}`)}
             className="w-auto flex-1 min-w-45"
           />
-          <Button onClick={() => void load(date, true)} disabled={busy} className="bg-emerald-700 hover:bg-emerald-800">
+          <Button onClick={reload} disabled={busy} className="bg-emerald-700 hover:bg-emerald-800">
             조회
           </Button>
         </div>
 
-        <div className="space-y-4">
-          <DurationRow label="수면시간" value={sleep} onChange={setSleep} error={errors.sleepMinutes} />
-          <DurationRow label="공부시간" value={study} onChange={setStudy} error={errors.studyMinutes} />
-          <DurationRow label="운동시간" value={exercise} onChange={setExercise} error={errors.exerciseMinutes} />
+        {form === null ? (
+          <JournalFormSkeleton />
+        ) : (
+          <>
+            <div className="space-y-4">
+              <DurationRow
+                label="수면시간"
+                value={form.sleep}
+                onChange={(sleep) => update({ sleep })}
+                error={errors.sleepMinutes}
+              />
+              <DurationRow
+                label="공부시간"
+                value={form.study}
+                onChange={(study) => update({ study })}
+                error={errors.studyMinutes}
+              />
+              <DurationRow
+                label="운동시간"
+                value={form.exercise}
+                onChange={(exercise) => update({ exercise })}
+                error={errors.exerciseMinutes}
+              />
 
-          <Row label="선잠횟수" unit="회" error={errors.napCount}>
-            <Input
-              type="number"
-              min={0}
-              value={napCount}
-              onChange={(e) => setNapCount(e.target.value)}
-              placeholder="횟수"
-              className="w-40"
+              <Row label="선잠횟수" unit="회" error={errors.napCount}>
+                <Input
+                  type="number"
+                  min={0}
+                  value={form.napCount}
+                  onChange={(e) => update({ napCount: e.target.value })}
+                  placeholder="횟수"
+                  className="w-40"
+                />
+              </Row>
+
+              <Row label="1초원칙 준수" unit="%" error={errors.oneSecondRuleRate}>
+                <Input
+                  type="number"
+                  step="0.1"
+                  min={0}
+                  max={100}
+                  value={form.rate}
+                  onChange={(e) => update({ rate: e.target.value })}
+                  placeholder="예: 95.5"
+                  className="w-40"
+                />
+              </Row>
+
+              <Row label="기분상태">
+                <NativeSelect
+                  value={form.mood}
+                  onChange={(v) => update({ mood: v as Mood | "" })}
+                  className="w-64"
+                >
+                  <option value="">선택하지 않음</option>
+                  {MOODS.map((m) => (
+                    <option key={m} value={m}>
+                      {MOOD_LABELS[m]}
+                    </option>
+                  ))}
+                </NativeSelect>
+              </Row>
+
+              <YesNoRow
+                label="슬로싱킹"
+                value={form.slowThinking}
+                onChange={(slowThinking) => update({ slowThinking })}
+              />
+              <YesNoRow
+                label="취침전생각"
+                value={form.thoughtBeforeSleep}
+                onChange={(thoughtBeforeSleep) => update({ thoughtBeforeSleep })}
+              />
+              <YesNoRow
+                label="비타민복용"
+                value={form.vitaminTaken}
+                onChange={(vitaminTaken) => update({ vitaminTaken })}
+              />
+            </div>
+
+            <Textarea
+              value={form.content}
+              onChange={(e) => update({ content: e.target.value })}
+              placeholder="오늘의 몰입 기록을 남겨 주세요."
+              className="mt-6 min-h-70"
             />
-          </Row>
-
-          <Row label="1초원칙 준수" unit="%" error={errors.oneSecondRuleRate}>
-            <Input
-              type="number"
-              step="0.1"
-              min={0}
-              max={100}
-              value={rate}
-              onChange={(e) => setRate(e.target.value)}
-              placeholder="예: 95.5"
-              className="w-40"
-            />
-          </Row>
-
-          <Row label="기분상태">
-            <NativeSelect value={mood} onChange={(v) => setMood(v as Mood | "")} className="w-64">
-              <option value="">선택하지 않음</option>
-              {MOODS.map((m) => (
-                <option key={m} value={m}>
-                  {MOOD_LABELS[m]}
-                </option>
-              ))}
-            </NativeSelect>
-          </Row>
-
-          <YesNoRow label="슬로싱킹" value={slowThinking} onChange={setSlowThinking} />
-          <YesNoRow label="취침전생각" value={thoughtBeforeSleep} onChange={setThoughtBeforeSleep} />
-          <YesNoRow label="비타민복용" value={vitaminTaken} onChange={setVitaminTaken} />
-        </div>
-
-        <Textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="오늘의 몰입 기록을 남겨 주세요."
-          className="mt-6 min-h-70"
-        />
-        {errors.content && <p className="mt-2 text-sm text-destructive">{errors.content}</p>}
+            {errors.content && <p className="mt-2 text-sm text-destructive">{errors.content}</p>}
+          </>
+        )}
       </div>
 
       {notice && (
@@ -221,18 +303,35 @@ export function JournalPage() {
 
       <Button
         onClick={() => void save()}
-        disabled={busy}
+        disabled={busy || form === null}
         className="mt-5 w-full bg-emerald-700 py-6 text-base hover:bg-emerald-800"
       >
         저장하기
       </Button>
 
-      {/* 일지가 없는 날짜에는 삭제할 것이 없으므로 보이지 않는다. */}
-      {exists && (
+      {/* 일지가 없는 날에는 지울 것이 없다 */}
+      {exists && form !== null && (
         <Button variant="ghost" onClick={() => void remove()} disabled={busy} className="mt-2 w-full text-destructive">
           이 날짜 일지 삭제
         </Button>
       )}
+    </div>
+  );
+}
+
+/** 실제 폼과 같은 높이·배치를 차지한다. 그래야 데이터가 도착해도 화면이 튀지 않는다. */
+function JournalFormSkeleton() {
+  return (
+    <div aria-hidden className="animate-pulse">
+      <div className="space-y-4">
+        {Array.from({ length: 9 }, (_, i) => (
+          <div key={i} className="flex items-center gap-4">
+            <div className="h-4 w-38 shrink-0 rounded bg-muted" />
+            <div className="h-9 w-48 rounded bg-muted" />
+          </div>
+        ))}
+      </div>
+      <div className="mt-6 min-h-70 rounded-md bg-muted" />
     </div>
   );
 }

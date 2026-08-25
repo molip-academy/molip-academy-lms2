@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ApiError, api } from "@/lib/api";
 import {
@@ -23,27 +23,33 @@ export function JournalListPage() {
   // 월은 URL에 남는다. 그래야 뒤로가기와 북마크가 동작한다.
   const month = searchParams.get("month") ?? currentMonth();
 
-  const [summaries, setSummaries] = useState<Map<string, JournalSummary>>(new Map());
-  const [busy, setBusy] = useState(true);
+  // null이면 아직 못 불러온 상태다. 빈 Map은 "이 달에 일지가 하나도 없음"과 구분되지 않아,
+  // 로딩 중에 31줄이 전부 "기록 없음"으로 깔렸다가 채워지는 장면이 나왔다.
+  const [summaries, setSummaries] = useState<Map<string, JournalSummary> | null>(null);
+
+  /** 월을 빠르게 넘길 때 이전 달의 응답이 늦게 도착해 덮어쓰는 것을 막는다. */
+  const requestId = useRef(0);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async (target: string) => {
-    setBusy(true);
+    const id = ++requestId.current;
     setError(null);
     try {
       const { from, to } = monthRange(target);
       const rows = await api.get<JournalSummary[]>(
         `/api/v1/journals?from=${from}&to=${to}`,
       );
+      if (id !== requestId.current) return; // 더 최신 요청이 이미 나갔다
       setSummaries(new Map(rows.map((row) => [row.journalDate, row])));
     } catch (e) {
+      if (id !== requestId.current) return;
+      setSummaries((current) => current ?? new Map());
       setError(e instanceof ApiError ? e.message : "목록을 불러오지 못했습니다.");
-    } finally {
-      setBusy(false);
     }
   }, []);
 
   useEffect(() => {
+    setSummaries(null);
     void load(month);
   }, [load, month]);
 
@@ -62,7 +68,7 @@ export function JournalListPage() {
   }
 
   const today = todayIso();
-  const written = summaries.size;
+  const written = summaries?.size ?? 0;
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-8">
@@ -77,7 +83,7 @@ export function JournalListPage() {
         <div className="text-center">
           <div className="text-lg font-semibold">{formatMonth(month)}</div>
           <div className="text-xs text-muted-foreground">
-            {busy ? "불러오는 중…" : `${daysOfMonth(month).length}일 중 ${written}일 작성`}
+            {summaries === null ? "불러오는 중…" : `${daysOfMonth(month).length}일 중 ${written}일 작성`}
           </div>
         </div>
         <Button variant="outline" size="sm" onClick={() => goToMonth(1)}>
@@ -91,9 +97,12 @@ export function JournalListPage() {
         </p>
       )}
 
+      {summaries === null ? (
+        <MonthSkeleton days={daysOfMonth(month).length} />
+      ) : (
       <ul className="divide-y rounded-xl border">
         {daysOfMonth(month).map((date) => {
-          const summary = summaries.get(date);
+          const summary = summaries!.get(date);
           const { day, weekday, isWeekend } = formatDay(date);
           const isToday = date === today;
 
@@ -160,6 +169,21 @@ export function JournalListPage() {
           );
         })}
       </ul>
+      )}
     </div>
+  );
+}
+
+/** 실제 목록과 같은 줄 수·높이를 차지해, 데이터가 도착해도 화면이 튀지 않는다. */
+function MonthSkeleton({ days }: { days: number }) {
+  return (
+    <ul aria-hidden className="animate-pulse divide-y rounded-xl border">
+      {Array.from({ length: days }, (_, i) => (
+        <li key={i} className="flex items-center gap-3 px-3 py-2.5">
+          <div className="h-9 w-11 shrink-0 rounded bg-muted" />
+          <div className="h-4 flex-1 rounded bg-muted" />
+        </li>
+      ))}
+    </ul>
   );
 }
