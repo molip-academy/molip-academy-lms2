@@ -6,15 +6,15 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `back`에 Spring Boot 4.x · JDK 25 · Gradle Kotlin DSL 프로젝트가 있고, 루트 패키지는 `com.back`, 메인 클래스는 `com.back.BackApplication`이다
-- [ ] DevTools, Lombok, Spring Data JPA, Validation, Spring Security, H2 의존성이 들어 있다
-- [ ] `.gitignore`가 `.env`, `db_dev.mv.db`, 빌드 산출물, `node_modules`를 무시하며, `.env`보다 먼저 커밋된다
-- [ ] 비밀값은 `back/.env`에서 `spring.config.import: optional:file:.env[.properties]`로 읽힌다
-- [ ] `.env`가 없어도 앱이 뜬다 (개발·테스트 기본값이 프로퍼티에 있다)
-- [ ] 개발 모드는 `application.yml` + `application-dev.yml`을 쓰고, 파일 H2(`./db_dev.mv.db`)에 `ddl-auto: update`이며, h2-console에 접속된다
-- [ ] 테스트 모드는 `application.yml` + `application-test.yml`을 쓰고, 인메모리 H2에 `ddl-auto: create`다
-- [ ] OSIV가 꺼져 있다
-- [ ] `@EnableJpaAuditing`이 켜져 있다
-- [ ] 테스트 프로파일에서 스프링 컨텍스트가 로드되는 테스트가 초록이다
+- [x] `back`에 Spring Boot 4.x · JDK 25 · Gradle Kotlin DSL 프로젝트가 있고, 루트 패키지는 `com.back`, 메인 클래스는 `com.back.BackApplication`이다
+- [x] DevTools, Lombok, Spring Data JPA, Validation, Spring Security, H2 의존성이 들어 있다
+- [x] `.gitignore`가 `.env`, `db_dev.mv.db`, 빌드 산출물, `node_modules`를 무시하며, `.env`보다 먼저 커밋된다
+- [x] 비밀값은 `back/.env`에서 `spring.config.import: optional:file:.env[.properties]`로 읽힌다
+- [x] `.env`가 없어도 앱이 뜬다 (개발·테스트 기본값이 프로퍼티에 있다)
+- [x] 개발 모드는 `application.yml` + `application-dev.yml`을 쓰고, 파일 H2(`./db_dev.mv.db`)에 `ddl-auto: update`이며, h2-console에 접속된다
+- [x] 테스트 모드는 `application.yml` + `application-test.yml`을 쓰고, 인메모리 H2에 `ddl-auto: create`다
+- [x] OSIV가 꺼져 있다
+- [x] `@EnableJpaAuditing`이 켜져 있다
+- [x] 테스트 프로파일에서 스프링 컨텍스트가 로드되는 테스트가 초록이다

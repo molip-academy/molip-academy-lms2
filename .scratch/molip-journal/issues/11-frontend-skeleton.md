@@ -6,11 +6,11 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `front-react`에 Vite + React + TypeScript 프로젝트가 있다
-- [ ] Tailwind 4가 설정되어 스타일이 적용된다
-- [ ] shadcn/ui가 설정되어 컴포넌트를 추가할 수 있다
-- [ ] 프리텐다드 웹폰트가 **다이나믹 서브셋**으로 적용되어 한글이 프리텐다드로 렌더된다
-- [ ] 개발 서버가 뜨고 스타일이 입혀진 화면이 보인다
-- [ ] 빌드가 통과한다
+- [x] `front-react`에 Vite + React + TypeScript 프로젝트가 있다
+- [x] Tailwind 4가 설정되어 스타일이 적용된다
+- [x] shadcn/ui가 설정되어 컴포넌트를 추가할 수 있다
+- [x] 프리텐다드 웹폰트가 **다이나믹 서브셋**으로 적용되어 한글이 프리텐다드로 렌더된다
+- [x] 개발 서버가 뜨고 스타일이 입혀진 화면이 보인다
+- [x] 빌드가 통과한다

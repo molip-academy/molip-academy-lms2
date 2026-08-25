@@ -10,6 +10,16 @@ Issues and specs for this repo live as markdown files in `.scratch/`.
 - Triage state is recorded as a `Status:` line near the top of each issue file (see `triage-labels.md` for the role strings)
 - Comments and conversation history append to the bottom of the file under a `## Comments` heading
 
+## Finishing an issue
+
+The five triage roles in `triage-labels.md` answer "who acts next", so none of them means "finished". Completion is a separate lifecycle state:
+
+- Set `Status: done` when every acceptance criterion holds.
+- **Tick the acceptance criteria (`- [ ]` → `- [x]`) as they are met, not in one pass at the end.** An issue whose work is finished but whose boxes are all empty is indistinguishable from one nobody has started.
+- A directory of issues gets a `README.md` index. GitHub renders it under the file listing, which is the only place status is visible at a glance — the listing itself shows filenames and nothing else.
+
+If work lands without going through the per-issue flow (one agent implementing many issues in a single pass, for example), the issue files do not update themselves. Closing them out is part of that work, not an afterthought.
+
 ## When a skill says "publish to the issue tracker"
 
 Create a new file under `.scratch/<feature-slug>/` (creating the directory if needed).

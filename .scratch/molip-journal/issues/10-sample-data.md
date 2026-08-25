@@ -6,13 +6,13 @@
 
 **Blocked by:** 07
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `com.back.global.initData.BaseInitData`에 `baseInitDataApplicationRunner` 빈이 있고 `@Transactional`이다
-- [ ] **회원이 한 명이라도 있으면 샘플 생성 로직이 즉시 중단된다**
-- [ ] 회원 5명(`user1`~`user5`, 닉네임 `유저1`~`유저5`)이 만들어진다
-- [ ] `user1`에게 최근 7일치 몰입일지가 만들어지며, 값이 서로 달라 화면 확인에 쓸 만하다
-- [ ] 나머지 회원은 일지 없이 남는다
-- [ ] 샘플 회원의 비밀번호도 BCrypt로 해시되어 저장된다
-- [ ] 앱을 두 번 실행해도 회원과 일지 수가 늘지 않는다
-- [ ] 통합 테스트가 "회원이 이미 있으면 다시 만들지 않는다"를 덮는다
+- [x] `com.back.global.initData.BaseInitData`에 `baseInitDataApplicationRunner` 빈이 있고 `@Transactional`이다
+- [x] **회원이 한 명이라도 있으면 샘플 생성 로직이 즉시 중단된다**
+- [x] 회원 5명(`user1`~`user5`, 닉네임 `유저1`~`유저5`)이 만들어진다
+- [x] `user1`에게 최근 7일치 몰입일지가 만들어지며, 값이 서로 달라 화면 확인에 쓸 만하다
+- [x] 나머지 회원은 일지 없이 남는다
+- [x] 샘플 회원의 비밀번호도 BCrypt로 해시되어 저장된다
+- [x] 앱을 두 번 실행해도 회원과 일지 수가 늘지 않는다
+- [x] 통합 테스트가 "회원이 이미 있으면 다시 만들지 않는다"를 덮는다
