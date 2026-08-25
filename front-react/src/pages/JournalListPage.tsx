@@ -29,6 +29,7 @@ export function JournalListPage() {
   // 로딩 중에 달력이 전부 빈 칸으로 깔렸다가 채워지는 장면이 나온다.
   const [summaries, setSummaries] = useState<Map<string, JournalSummary> | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [picked, setPicked] = useState(todayIso());
 
   /** 월을 빠르게 넘길 때 이전 달의 응답이 늦게 도착해 덮어쓰는 것을 막는다. */
   const requestId = useRef(0);
@@ -71,6 +72,14 @@ export function JournalListPage() {
   const today = todayIso();
   const days = daysOfMonth(month);
   const written = summaries?.size ?? 0;
+
+  // 월을 넘기면 고른 날짜도 그 달 안으로 따라온다. 상태를 고쳐 쓰는 대신 계산해서
+  // 쓰면 "월 변경 → 선택 보정" 같은 뒤따르는 effect가 필요 없다.
+  const selected = picked.startsWith(month)
+    ? picked
+    : month === currentMonth()
+      ? today
+      : `${month}-01`;
 
   // 1일이 무슨 요일인지에 따라 앞을 비운다.
   const leadingBlanks = days.length > 0 ? weekdayIndex(days[0]) : 0;
@@ -130,21 +139,23 @@ export function JournalListPage() {
                 date={date}
                 summary={summaries.get(date)}
                 isToday={date === today}
-                onOpen={() => navigate(`/journals/${date}`)}
+                isSelected={date === selected}
+                onPick={() => setPicked(date)}
               />
             ),
           )}
         </div>
       </div>
 
-      {summaries !== null && written > 0 && (
-        <MonthDigest days={days} summaries={summaries} onRemove={remove} />
-      )}
-
-      {summaries !== null && written === 0 && (
-        <p className="mt-6 text-center text-sm text-muted-foreground">
-          이 달에는 아직 기록이 없습니다. 날짜를 눌러 시작해 보세요.
-        </p>
+      {/* 달력은 날짜를 고르기만 한다. 일지로 들어가는 문은 아래 카드다. */}
+      {summaries !== null && (
+        <SelectedDayCard
+          date={selected}
+          summary={summaries.get(selected)}
+          isToday={selected === today}
+          onOpen={() => navigate(`/journals/${selected}`)}
+          onRemove={() => void remove(selected)}
+        />
       )}
     </div>
   );
@@ -154,12 +165,14 @@ function DayCell({
   date,
   summary,
   isToday,
-  onOpen,
+  isSelected,
+  onPick,
 }: {
   date: string;
   summary?: JournalSummary;
   isToday: boolean;
-  onOpen: () => void;
+  isSelected: boolean;
+  onPick: () => void;
 }) {
   const { day, isWeekend } = formatDay(date);
 
@@ -173,10 +186,12 @@ function DayCell({
   return (
     <button
       type="button"
-      onClick={onOpen}
+      onClick={onPick}
       aria-label={label}
+      aria-pressed={isSelected}
       title={label}
-      className="flex aspect-square flex-col items-center justify-center gap-1 rounded-lg text-sm transition hover:bg-muted"
+      className={`flex aspect-square flex-col items-center justify-center gap-1 rounded-lg text-sm transition
+        ${isSelected ? "bg-muted ring-2 ring-emerald-600" : "hover:bg-muted"}`}
     >
       <span
         className={`flex h-7 w-7 items-center justify-center rounded-full tabular-nums ${
@@ -197,55 +212,71 @@ function DayCell({
   );
 }
 
-/** 달력은 패턴을 보여주고, 이 목록은 실제로 뭘 썼는지 보여준다. 쓴 날만 나온다. */
-function MonthDigest({
-  days,
-  summaries,
+/** 달력에서 고른 하루. 일지가 있으면 요약을, 없으면 쓰러 가는 자리를 보여준다. */
+function SelectedDayCard({
+  date,
+  summary,
+  isToday,
+  onOpen,
   onRemove,
 }: {
-  days: string[];
-  summaries: Map<string, JournalSummary>;
-  onRemove: (date: string) => void;
+  date: string;
+  summary?: JournalSummary;
+  isToday: boolean;
+  onOpen: () => void;
+  onRemove: () => void;
 }) {
-  const navigate = useNavigate();
-  const rows = days.map((d) => summaries.get(d)).filter((s): s is JournalSummary => Boolean(s));
+  const { day, weekday } = formatDay(date);
+  const heading = `${Number(date.slice(5, 7))}월 ${day}일 (${weekday})${isToday ? " · 오늘" : ""}`;
+
+  if (!summary) {
+    return (
+      <div className="mt-4 rounded-xl border border-dashed p-5 text-center">
+        <div className="text-sm font-semibold">{heading}</div>
+        <p className="mt-1 text-sm text-muted-foreground">아직 이 날의 기록이 없습니다.</p>
+        <Button
+          onClick={onOpen}
+          className="mt-4 w-full bg-emerald-700 py-5 text-base hover:bg-emerald-800"
+        >
+          일지 쓰기
+        </Button>
+      </div>
+    );
+  }
 
   return (
-    <ul className="mt-6 divide-y rounded-xl border">
-      {rows.map((summary) => {
-        const { day, weekday } = formatDay(summary.journalDate);
-        return (
-          <li key={summary.journalDate} className="flex items-center gap-1 pr-1">
-            <button
-              type="button"
-              onClick={() => navigate(`/journals/${summary.journalDate}`)}
-              className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-left"
-            >
-              <span className="w-9 shrink-0 text-center">
-                <span className="block text-base leading-tight font-semibold tabular-nums">{day}</span>
-                <span className="block text-[11px] leading-tight text-muted-foreground">{weekday}</span>
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
-                  {summary.mood && <span className="font-medium">{MOOD_LABELS[summary.mood]}</span>}
-                  <span>공부 {formatMinutes(summary.studyMinutes)}</span>
-                </span>
-                {summary.preview && (
-                  <span className="mt-0.5 block truncate text-sm">{summary.preview}</span>
-                )}
-              </span>
-            </button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="shrink-0 px-2 text-destructive"
-              onClick={() => onRemove(summary.journalDate)}
-            >
-              삭제
-            </Button>
-          </li>
-        );
-      })}
-    </ul>
+    <div className="mt-4 rounded-xl border">
+      <button type="button" onClick={onOpen} className="w-full p-5 text-left">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold">{heading}</span>
+          {summary.mood && (
+            <span className="rounded-full bg-muted px-2 py-0.5 text-xs">
+              {MOOD_LABELS[summary.mood]}
+            </span>
+          )}
+        </div>
+
+        <dl className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+          <div>
+            <dt className="inline">공부 </dt>
+            <dd className="inline font-medium text-foreground">
+              {formatMinutes(summary.studyMinutes)}
+            </dd>
+          </div>
+        </dl>
+
+        {summary.preview && <p className="mt-2 line-clamp-2 text-sm">{summary.preview}</p>}
+
+        <span className="mt-3 inline-block text-sm font-medium text-emerald-700">
+          일지 열기 →
+        </span>
+      </button>
+
+      <div className="border-t px-3 py-2">
+        <Button variant="ghost" size="sm" className="text-destructive" onClick={onRemove}>
+          이 날짜 일지 삭제
+        </Button>
+      </div>
+    </div>
   );
 }
