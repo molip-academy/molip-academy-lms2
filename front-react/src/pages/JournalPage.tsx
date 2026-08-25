@@ -183,17 +183,17 @@ export function JournalPage() {
     <div className="mx-auto w-full max-w-2xl px-4 py-8">
       <AppHeader />
 
-      <h1 className="mb-8 text-center text-4xl font-bold tracking-tight">몰입 일지</h1>
+      <h1 className="mb-6 text-center text-3xl font-bold tracking-tight sm:mb-8 sm:text-4xl">몰입 일지</h1>
 
-      <div className="rounded-xl border p-5 shadow-sm">
-        <div className="mb-6 flex flex-wrap items-center gap-3">
+      <div className="rounded-xl border p-4 shadow-sm sm:p-5">
+        <div className="mb-6 flex items-center gap-2 sm:gap-3">
           <Input
             type="date"
             value={date}
             onChange={(e) => e.target.value && navigate(`/journals/${e.target.value}`)}
-            className="w-auto flex-1 min-w-45"
+            className="w-auto min-w-0 flex-1"
           />
-          <Button onClick={reload} disabled={busy} className="bg-emerald-700 hover:bg-emerald-800">
+          <Button onClick={reload} disabled={busy} className="shrink-0 bg-emerald-700 hover:bg-emerald-800">
             조회
           </Button>
         </div>
@@ -225,24 +225,26 @@ export function JournalPage() {
               <Row label="선잠횟수" unit="회" error={errors.napCount}>
                 <Input
                   type="number"
+                  inputMode="numeric"
                   min={0}
                   value={form.napCount}
                   onChange={(e) => update({ napCount: e.target.value })}
                   placeholder="횟수"
-                  className="w-40"
+                  className="w-full min-w-0 sm:w-40"
                 />
               </Row>
 
               <Row label="1초원칙 준수" unit="%" error={errors.oneSecondRuleRate}>
                 <Input
                   type="number"
+                  inputMode="decimal"
                   step="0.1"
                   min={0}
                   max={100}
                   value={form.rate}
                   onChange={(e) => update({ rate: e.target.value })}
                   placeholder="예: 95.5"
-                  className="w-40"
+                  className="w-full min-w-0 sm:w-40"
                 />
               </Row>
 
@@ -250,7 +252,7 @@ export function JournalPage() {
                 <NativeSelect
                   value={form.mood}
                   onChange={(v) => update({ mood: v as Mood | "" })}
-                  className="w-64"
+                  className="w-full min-w-0 sm:w-64"
                 >
                   <option value="">선택하지 않음</option>
                   {MOODS.map((m) => (
@@ -282,7 +284,7 @@ export function JournalPage() {
               value={form.content}
               onChange={(e) => update({ content: e.target.value })}
               placeholder="오늘의 몰입 기록을 남겨 주세요."
-              className="mt-6 min-h-70"
+              className="mt-6 min-h-48 sm:min-h-70"
             />
             {errors.content && <p className="mt-2 text-sm text-destructive">{errors.content}</p>}
           </>
@@ -325,13 +327,13 @@ function JournalFormSkeleton() {
     <div aria-hidden className="animate-pulse">
       <div className="space-y-4">
         {Array.from({ length: 9 }, (_, i) => (
-          <div key={i} className="flex items-center gap-4">
-            <div className="h-4 w-38 shrink-0 rounded bg-muted" />
-            <div className="h-9 w-48 rounded bg-muted" />
+          <div key={i} className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-4">
+            <div className="h-4 w-24 rounded bg-muted sm:w-38 sm:shrink-0" />
+            <div className="h-9 w-full rounded bg-muted sm:w-48" />
           </div>
         ))}
       </div>
-      <div className="mt-6 min-h-70 rounded-md bg-muted" />
+      <div className="mt-6 min-h-48 rounded-md bg-muted sm:min-h-70" />
     </div>
   );
 }
@@ -347,16 +349,18 @@ function Row({
   error?: string;
   children: React.ReactNode;
 }) {
+  // 좁은 화면에서는 라벨을 입력 위로 쌓는다. 라벨(152px)과 컨트롤을 한 줄에 두면
+  // 375px 폰의 카드 안쪽 가용 폭(303px)을 모든 행이 넘긴다.
   return (
     <div>
-      <div className="flex items-center gap-4">
-        <div className="w-38 shrink-0 font-semibold">
+      <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-4">
+        <div className="font-semibold sm:w-38 sm:shrink-0">
           {label}
           {unit && <span className="ml-1 text-xs font-normal text-muted-foreground">({unit})</span>}
         </div>
-        <div className="flex items-center gap-2">{children}</div>
+        <div className="flex w-full items-center gap-2 sm:w-auto">{children}</div>
       </div>
-      {error && <p className="mt-1 ml-38 text-sm text-destructive">{error}</p>}
+      {error && <p className="mt-1 text-sm text-destructive sm:ml-38">{error}</p>}
     </div>
   );
 }
@@ -376,21 +380,23 @@ function DurationRow({
     <Row label={label} unit="HH:MM" error={error}>
       <Input
         type="number"
+        inputMode="numeric"
         min={0}
         value={value.hours}
         onChange={(e) => onChange({ ...value, hours: e.target.value })}
         placeholder="시"
-        className="w-24 text-center"
+        className="w-full min-w-0 text-center sm:w-24"
       />
       <span className="text-muted-foreground">:</span>
       <Input
         type="number"
+        inputMode="numeric"
         min={0}
         max={59}
         value={value.minutes}
         onChange={(e) => onChange({ ...value, minutes: e.target.value })}
         placeholder="분"
-        className="w-24 text-center"
+        className="w-full min-w-0 text-center sm:w-24"
       />
     </Row>
   );
@@ -407,7 +413,7 @@ function YesNoRow({
 }) {
   return (
     <Row label={label}>
-      <NativeSelect value={value} onChange={onChange} className="w-48">
+      <NativeSelect value={value} onChange={onChange} className="w-full min-w-0 sm:w-48">
         {/* "아니오"와 "안 적음"은 다르다. 비워 두는 것이 기본값이다. */}
         <option value="">선택하지 않음</option>
         <option value="yes">예</option>

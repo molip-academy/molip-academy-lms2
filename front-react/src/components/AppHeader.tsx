@@ -14,24 +14,37 @@ export function AppHeader() {
 	const { member, logout } = useAuth();
 
 	return (
-		<header className="mb-6 flex items-center justify-between gap-3">
-			<Link to="/" className="text-base font-semibold tracking-tight hover:opacity-70">
+		<header className="mb-6 flex items-center justify-between gap-2 sm:gap-3">
+			<Link
+				to="/"
+				className="shrink-0 text-sm font-semibold tracking-tight hover:opacity-70 sm:text-base"
+			>
 				몰입 아카데미
 			</Link>
 
-			<nav className="flex items-center gap-1">
+			<nav className="flex min-w-0 items-center gap-0.5 sm:gap-1">
 				<Link
 					to={`/journals/${todayIso()}`}
-					className={buttonVariants({ variant: "ghost", size: "sm" })}
+					className={`${buttonVariants({ variant: "ghost", size: "sm" })} shrink-0 px-2 sm:px-3`}
 				>
-					오늘 일지
+					오늘
+					<span className="hidden sm:inline">&nbsp;일지</span>
 				</Link>
 				{member && (
-					<Link to="/me" className={buttonVariants({ variant: "ghost", size: "sm" })}>
-						{member.nickname}님
+					<Link
+						to="/me"
+						className={`${buttonVariants({ variant: "ghost", size: "sm" })} min-w-0 px-2 sm:px-3`}
+					>
+						{/* 닉네임은 최대 20자라 좁은 화면에서 머리말을 밀어낼 수 있다 */}
+						<span className="truncate">{member.nickname}님</span>
 					</Link>
 				)}
-				<Button variant="ghost" size="sm" onClick={() => void logout()}>
+				<Button
+					variant="ghost"
+					size="sm"
+					onClick={() => void logout()}
+					className="shrink-0 px-2 sm:px-3"
+				>
 					로그아웃
 				</Button>
 			</nav>

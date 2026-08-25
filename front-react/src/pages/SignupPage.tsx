@@ -36,7 +36,7 @@ export function SignupPage() {
   }
 
   return (
-    <div className="mx-auto flex min-h-svh w-full max-w-md flex-col justify-center px-6 py-12">
+    <div className="mx-auto flex min-h-svh w-full max-w-md flex-col justify-center px-5 py-12 sm:px-6">
       <h1 className="mb-8 text-center text-3xl font-bold tracking-tight">회원가입</h1>
 
       <form onSubmit={handleSubmit} className="space-y-5">

@@ -74,20 +74,20 @@ export function JournalListPage() {
     <div className="mx-auto w-full max-w-2xl px-4 py-8">
       <AppHeader />
 
-      <h1 className="mb-6 text-center text-4xl font-bold tracking-tight">몰입 일지</h1>
+      <h1 className="mb-6 text-center text-3xl font-bold tracking-tight sm:text-4xl">몰입 일지</h1>
 
-      <div className="mb-4 flex items-center justify-between">
-        <Button variant="outline" size="sm" onClick={() => goToMonth(-1)}>
-          ← 이전 달
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <Button variant="outline" size="sm" onClick={() => goToMonth(-1)} className="shrink-0 px-2 sm:px-3">
+          ←<span className="hidden sm:inline">&nbsp;이전 달</span>
         </Button>
-        <div className="text-center">
+        <div className="min-w-0 text-center">
           <div className="text-lg font-semibold">{formatMonth(month)}</div>
           <div className="text-xs text-muted-foreground">
             {summaries === null ? "불러오는 중…" : `${daysOfMonth(month).length}일 중 ${written}일 작성`}
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={() => goToMonth(1)}>
-          다음 달 →
+        <Button variant="outline" size="sm" onClick={() => goToMonth(1)} className="shrink-0 px-2 sm:px-3">
+          <span className="hidden sm:inline">다음 달&nbsp;</span>→
         </Button>
       </div>
 
@@ -159,7 +159,7 @@ export function JournalListPage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="shrink-0 text-destructive"
+                  className="shrink-0 px-2 text-destructive sm:px-3"
                   onClick={() => void remove(date)}
                 >
                   삭제

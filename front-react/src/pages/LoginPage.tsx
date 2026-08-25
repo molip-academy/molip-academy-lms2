@@ -30,7 +30,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="mx-auto flex min-h-svh w-full max-w-md flex-col justify-center px-6 py-12">
+    <div className="mx-auto flex min-h-svh w-full max-w-md flex-col justify-center px-5 py-12 sm:px-6">
       <h1 className="mb-2 text-center text-3xl font-bold tracking-tight">몰입 아카데미</h1>
       <p className="mb-8 text-center text-sm text-muted-foreground">오늘의 몰입을 기록하세요</p>
 
