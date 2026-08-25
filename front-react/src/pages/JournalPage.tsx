@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { ApiError, api } from "@/lib/api";
 import { MOODS, MOOD_LABELS } from "@/lib/mood";
 import type { Mood } from "@/lib/mood";
 import { toHoursAndMinutes, toMinutes } from "@/lib/time";
 import { todayIso } from "@/lib/date";
 import type { JournalLookup } from "@/lib/types";
-import { useAuth } from "@/auth/AuthContext";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { AppHeader } from "@/components/AppHeader";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -16,7 +16,6 @@ type Duration = { hours: string; minutes: string };
 const EMPTY_DURATION: Duration = { hours: "", minutes: "" };
 
 export function JournalPage() {
-  const { member, logout } = useAuth();
   const navigate = useNavigate();
 
   // 날짜는 URL이 소유한다 (ADR 0002와 같은 모양). 그래서 북마크·공유·뒤로가기가 동작한다.
@@ -137,20 +136,7 @@ export function JournalPage() {
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-8">
-      <header className="mb-6 flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">{member?.nickname}님</span>
-        <div className="flex gap-2">
-          <Link to="/" className={buttonVariants({ variant: "ghost", size: "sm" })}>
-            목록
-          </Link>
-          <Link to="/me" className={buttonVariants({ variant: "ghost", size: "sm" })}>
-            내 정보
-          </Link>
-          <Button variant="ghost" size="sm" onClick={() => void logout()}>
-            로그아웃
-          </Button>
-        </div>
-      </header>
+      <AppHeader />
 
       <h1 className="mb-8 text-center text-4xl font-bold tracking-tight">몰입 일지</h1>
 

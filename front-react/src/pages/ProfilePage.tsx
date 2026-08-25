@@ -1,14 +1,15 @@
-import { Link } from "react-router-dom";
 import { useAuth } from "@/auth/AuthContext";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { AppHeader } from "@/components/AppHeader";
+
 
 export function ProfilePage() {
-  const { member, logout } = useAuth();
+  const { member } = useAuth();
 
   if (!member) return null;
 
   return (
-    <div className="mx-auto w-full max-w-md px-6 py-10">
+    <div className="mx-auto w-full max-w-md px-4 py-8">
+      <AppHeader />
       <h1 className="mb-8 text-center text-3xl font-bold tracking-tight">내 정보</h1>
 
       <dl className="divide-y rounded-lg border">
@@ -17,14 +18,6 @@ export function ProfilePage() {
         <Row label="가입일" value={formatJoinedAt(member.joinedAt)} />
       </dl>
 
-      <div className="mt-8 space-y-3">
-        <Link to="/" className={buttonVariants({ variant: "outline" }) + " w-full"}>
-          몰입 일지로
-        </Link>
-        <Button variant="ghost" className="w-full" onClick={() => void logout()}>
-          로그아웃
-        </Button>
-      </div>
     </div>
   );
 }

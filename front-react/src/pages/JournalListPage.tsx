@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ApiError, api } from "@/lib/api";
 import {
   currentMonth,
@@ -13,11 +13,10 @@ import {
 import { MOOD_LABELS } from "@/lib/mood";
 import { formatMinutes } from "@/lib/time";
 import type { JournalSummary } from "@/lib/types";
-import { useAuth } from "@/auth/AuthContext";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { AppHeader } from "@/components/AppHeader";
+import { Button } from "@/components/ui/button";
 
 export function JournalListPage() {
-  const { member, logout } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -67,20 +66,7 @@ export function JournalListPage() {
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-8">
-      <header className="mb-6 flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">{member?.nickname}님</span>
-        <div className="flex gap-2">
-          <Link to={`/journals/${today}`} className={buttonVariants({ variant: "ghost", size: "sm" })}>
-            오늘 일지
-          </Link>
-          <Link to="/me" className={buttonVariants({ variant: "ghost", size: "sm" })}>
-            내 정보
-          </Link>
-          <Button variant="ghost" size="sm" onClick={() => void logout()}>
-            로그아웃
-          </Button>
-        </div>
-      </header>
+      <AppHeader />
 
       <h1 className="mb-6 text-center text-4xl font-bold tracking-tight">몰입 일지</h1>
 
