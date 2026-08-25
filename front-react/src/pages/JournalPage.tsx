@@ -432,9 +432,17 @@ function YesNoRow({
 }) {
   return (
     <Row label={label} compact>
-      <NativeSelect value={value} onChange={onChange} className="w-full min-w-0 px-2 sm:w-48 sm:px-3">
-        {/* "아니오"와 "안 적음"은 다르다. 비워 두는 것이 기본값이다. */}
-        <option value="">선택하지 않음</option>
+      <NativeSelect
+        value={value}
+        onChange={onChange}
+        className="w-full min-w-0 px-2 text-xs sm:w-48 sm:px-3 sm:text-sm"
+      >
+        {/*
+          "아니오"와 "안 적음"은 다르다. 비워 두는 것이 기본값이다.
+          셋이 한 줄에 놓이면 글자 공간이 74px뿐이라 "선택하지 않음"(76px)이 넘친다.
+          "미응답"은 이 프로젝트가 API 문서와 테스트에서 쓰는 용어이기도 하다.
+        */}
+        <option value="">미응답</option>
         <option value="yes">예</option>
         <option value="no">아니오</option>
       </NativeSelect>
