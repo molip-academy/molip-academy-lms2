@@ -76,11 +76,13 @@ async function request<T>(path: string, options: Options = {}): Promise<T> {
   return (text ? JSON.parse(text) : undefined) as T;
 }
 
+type ErrorPayload = { message?: string; errors?: Record<string, string> };
+
 async function toError(response: Response): Promise<ApiError> {
   let message = "요청을 처리하지 못했습니다.";
   let errors: Record<string, string> = {};
   try {
-    const payload = await response.json();
+    const payload = (await response.json()) as ErrorPayload;
     if (payload?.message) message = payload.message;
     if (payload?.errors) errors = payload.errors;
   } catch {

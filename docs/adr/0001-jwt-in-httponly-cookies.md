@@ -13,4 +13,5 @@ React SPA와 Spring API가 서로 다른 오리진에 있어 인증 수단을 �
 - 쿠키는 브라우저가 자동으로 붙이므로 **CSRF 방어가 필수**다. Spring Security의 `CookieCsrfTokenRepository.withHttpOnlyFalse()`를 써서 `XSRF-TOKEN` 쿠키 ↔ `X-XSRF-TOKEN` 헤더로 막는다.
 - 리프레시 토큰을 저장하는 순간 **무상태(stateless)라는 JWT의 이점은 액세스 토큰 검증에만 남는다.** 이건 폐기 가능성과 맞바꾼 것이며, 의도된 것이다.
 - 프론트에는 토큰을 보관하거나 헤더에 붙이는 코드가 아예 없다. `credentials: 'include'`만 있으면 된다.
-- 로컬에서 `localhost:5173`과 `localhost:8080`은 **같은 사이트**(포트는 사이트 판정에 포함되지 않는다)라 `SameSite=Lax`로 충분하고 HTTPS가 필요 없다. 프론트와 백엔드가 진짜 다른 사이트에 배포되면 그때 `SameSite=None; Secure`로 바꿔야 하므로, `SameSite` 값과 CORS 허용 오리진은 프로퍼티로 빼 두었다.
+- 로컬에서 `localhost:5173`과 `localhost:8080`은 **같은 사이트**(포트는 사이트 판정에 포함되지 않는다)라 `SameSite=Lax`로 충분하고 HTTPS가 필요 없다. `SameSite` 값과 CORS 허용 오리진은 프로퍼티로 빼 두었다.
+- 프론트와 백엔드가 진짜 다른 사이트에 배포될 때의 처방은 [ADR 0003](./0003-same-origin-via-proxy.md)이 정정했다. `SameSite=None; Secure`로 바꾸는 것만으로는 부족하다.

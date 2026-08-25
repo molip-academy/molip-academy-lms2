@@ -8,7 +8,6 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
@@ -64,7 +63,11 @@ public class Journal extends BaseEntity {
 
 	private Boolean vitaminTaken;
 
-	@Lob
+	/**
+	 * @Lob을 쓰면 Postgres에서 large object(oid)로 매핑되어 조회가 깨진다.
+	 * 본문은 그냥 긴 텍스트일 뿐이므로 컬럼 타입을 직접 지정한다.
+	 */
+	@Column(columnDefinition = "text")
 	private String content;
 
 	public static Journal of(Member member, LocalDate journalDate) {

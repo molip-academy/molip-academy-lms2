@@ -1,0 +1,33 @@
+# 실서버(Railway). 값은 전부 환경변수로 주입되며 저장소에 비밀이 남지 않는다.
+server:
+  port: ${PORT:8080}
+
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      # 스키마는 Flyway가 소유한다. Hibernate는 어긋났는지 확인만 하고,
+      # 어긋나면 트래픽을 받기 전에 기동 자체가 실패한다.
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  h2:
+    console:
+      enabled: false
+
+# API 문서는 실서버에서 노출하지 않는다 (fail-closed).
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+logging:
+  level:
+    org.hibernate.SQL: warn

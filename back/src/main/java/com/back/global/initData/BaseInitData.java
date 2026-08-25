@@ -22,8 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
  * 개발자가 앱을 처음 켜면 화면을 바로 확인할 수 있도록 샘플을 넣는다.
  * 회원이 한 명이라도 있으면 아무것도 하지 않으므로 재실행해도 중복되지 않는다.
  *
- * <p>러너는 테스트 프로파일에서 뜨지 않는다. 테스트는 빈 DB에서 시작해야 하고,
- * 중복 생성 방지는 {@link #createSampleData()}를 직접 두 번 불러 검증한다.
+ * <p>러너는 개발 프로파일에서만 뜬다. 테스트는 빈 DB에서 시작해야 하고, 실서버에는
+ * 샘플 계정이 있어서는 안 된다. 중복 생성 방지는 {@link #createSampleData()}를
+ * 직접 두 번 불러 검증한다.
  */
 @Configuration
 @RequiredArgsConstructor
@@ -45,8 +46,12 @@ public class BaseInitData {
 	@Lazy
 	private BaseInitData self;
 
+	/**
+	 * 개발 프로파일에서만 돈다. "!test"였을 때는 실서버에서도 실행되어, 회원이 0명인
+	 * 갓 배포된 DB에 비밀번호가 알려진 계정 5개를 만들어 버렸다.
+	 */
 	@Bean
-	@Profile("!test")
+	@Profile("dev")
 	public ApplicationRunner baseInitDataApplicationRunner() {
 		return args -> self.createSampleData();
 	}
