@@ -64,16 +64,73 @@ resource "google_compute_address" "ip_1" {
 }
 # 네트워크 설정 끝
 
-# 이미지 저장소 설정 시작
-# 이미지는 로컬에서 빌드해 여기 올리고 VM이 당겨 쓴다.
-# VM에서 빌드하지 않는 이유: e2-small 에서 Gradle 빌드는 느리고 메모리도 빠듯해 배포할 때마다 서버가 멎는다.
-resource "google_artifact_registry_repository" "registry_1" {
-  location      = var.region
-  repository_id = "${var.prefix}-1"
-  format        = "DOCKER"
-  description   = "몰입 아카데미 백엔드 이미지"
+# GitHub Actions 연동 설정 시작
+# 이미지는 GitHub Actions 가 빌드해 ghcr.io 에 올리고, VM 이 당겨 쓴다.
+# 로컬이나 VM 에서 빌드하지 않는 이유: 로컬 Docker 에 의존하지 않기 위해서고,
+# e2-small 에서 Gradle 빌드는 느려 배포할 때마다 서버가 멎기 때문이다.
+
+# Actions 가 키 파일 없이 GCP 에 들어오는 통로.
+# 서비스 계정 키를 만들어 GitHub Secrets 에 넣는 방식은 그 키가 유출되면 끝이고 만료도 없다.
+resource "google_iam_workload_identity_pool" "pool_1" {
+  workload_identity_pool_id = "${var.prefix}-github-pool-1"
+  display_name              = "${var.prefix}-github-pool-1"
 }
-# 이미지 저장소 설정 끝
+
+resource "google_iam_workload_identity_pool_provider" "provider_1" {
+  workload_identity_pool_id          = google_iam_workload_identity_pool.pool_1.workload_identity_pool_id
+  workload_identity_pool_provider_id = "${var.prefix}-github-provider-1"
+
+  attribute_mapping = {
+    "google.subject"       = "assertion.sub"
+    "attribute.repository" = "assertion.repository"
+  }
+
+  # 이 저장소에서 온 토큰만 받는다. 없으면 GitHub 의 어떤 저장소든 이 프로젝트에 들어올 수 있다.
+  attribute_condition = "assertion.repository == '${var.github_repo_1}'"
+
+  oidc {
+    issuer_uri = "https://token.actions.githubusercontent.com"
+  }
+}
+
+# Actions 가 빌려 쓰는 신원
+resource "google_service_account" "sa_deploy_1" {
+  account_id   = "${var.prefix}-sa-deploy-1"
+  display_name = "${var.prefix}-sa-deploy-1"
+}
+
+resource "google_service_account_iam_member" "wif_binding_1" {
+  service_account_id = google_service_account.sa_deploy_1.name
+  role               = "roles/iam.workloadIdentityUser"
+  member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.pool_1.name}/attribute.repository/${var.github_repo_1}"
+}
+
+# 배포에 필요한 최소 권한: 메타데이터 갱신, IAP 터널, sudo 가능한 SSH
+resource "google_project_iam_member" "deploy_instance_admin_1" {
+  project = var.project_id
+  role    = "roles/compute.instanceAdmin.v1"
+  member  = "serviceAccount:${google_service_account.sa_deploy_1.email}"
+}
+
+resource "google_project_iam_member" "deploy_iap_1" {
+  project = var.project_id
+  role    = "roles/iap.tunnelResourceAccessor"
+  member  = "serviceAccount:${google_service_account.sa_deploy_1.email}"
+}
+
+resource "google_project_iam_member" "deploy_os_admin_1" {
+  project = var.project_id
+  role    = "roles/compute.osAdminLogin"
+  member  = "serviceAccount:${google_service_account.sa_deploy_1.email}"
+}
+
+# VM 의 서비스 계정으로 행세할 수 있어야 SSH 가 성립한다.
+resource "google_service_account_iam_member" "deploy_act_as_1" {
+  service_account_id = google_service_account.sa_1.name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${google_service_account.sa_deploy_1.email}"
+}
+# GitHub Actions 연동 설정 끝
 
 # VM 설정 시작
 
@@ -81,14 +138,6 @@ resource "google_artifact_registry_repository" "registry_1" {
 resource "google_service_account" "sa_1" {
   account_id   = "${var.prefix}-sa-1"
   display_name = "${var.prefix}-sa-1"
-}
-
-# 레지스트리 읽기 권한만 부착
-resource "google_artifact_registry_repository_iam_member" "registry_reader_1" {
-  location   = google_artifact_registry_repository.registry_1.location
-  repository = google_artifact_registry_repository.registry_1.name
-  role       = "roles/artifactregistry.reader"
-  member     = "serviceAccount:${google_service_account.sa_1.email}"
 }
 
 # 부팅 로그를 Cloud Logging 에서 볼 수 있게 한다. 기동이 실패하면 여기서 원인을 찾는다.
@@ -141,8 +190,13 @@ fi
 # 도커 네트워크 생성
 docker network create common || true
 
-# VM 의 서비스 계정으로 Artifact Registry 에 로그인한다. 키 파일이 없다.
-gcloud auth configure-docker ${var.region}-docker.pkg.dev --quiet
+# ghcr 로그인. 패키지가 비공개라 토큰이 필요하다.
+# 토큰이 아직 없으면 건너뛴다 — 여기서 실패하면 postgresql 과 caddy 까지 못 뜬다.
+if [ -n '${var.github_token_1}' ]; then
+  echo '${var.github_token_1}' | docker login ghcr.io -u '${var.github_owner_1}' --password-stdin
+else
+  echo 'github_token_1 이 비어 있어 ghcr 로그인을 건너뛴다. 비공개 이미지는 당길 수 없다.'
+fi
 
 # postgresql 설치
 docker rm -f pg_1 || true
@@ -186,9 +240,14 @@ docker run -d \
   caddy:2-alpine
 
 # app 설치
-# 첫 apply 때는 이미지가 아직 없다. 그때는 건너뛰고, deploy.sh 가 푸시 후 띄운다.
-if [ -n '${var.app_1_image}' ]; then
-  docker pull '${var.app_1_image}'
+# 어떤 이미지를 띄울지는 인스턴스 메타데이터의 app-image 가 정한다.
+# Terraform 변수로 두면 배포할 때마다 코드를 고쳐 apply 해야 하고, GitHub Actions 가
+# 태그를 갱신할 방법이 없다. 메타데이터라 커밋 SHA 태그를 그대로 쓸 수 있어 추적도 된다.
+APP_IMAGE=$(curl -fsS -H 'Metadata-Flavor: Google' \
+  http://metadata.google.internal/computeMetadata/v1/instance/attributes/app-image 2>/dev/null || echo '')
+
+if [ -n "$APP_IMAGE" ]; then
+  docker pull "$APP_IMAGE"
   docker rm -f app_1 || true
   docker run -d \
     --name app_1 \
@@ -204,7 +263,9 @@ if [ -n '${var.app_1_image}' ]; then
     -e 'CORS_ALLOWED_ORIGINS=${var.app_1_frontend_origin}' \
     -e 'TZ=Asia/Seoul' \
     -e 'JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=45' \
-    '${var.app_1_image}'
+    "$APP_IMAGE"
+else
+  echo 'app-image 메타데이터가 비어 있어 앱을 띄우지 않는다. Actions 가 배포하면 채워진다.'
 fi
 
 END_OF_FILE
@@ -245,9 +306,17 @@ resource "google_compute_instance" "instance_1" {
     # OS Login 을 켜면 IAM 으로 SSH 접근을 관리한다. 키를 VM 에 심지 않는다.
     enable-oslogin = "TRUE"
     startup-script = local.vm_user_data_base
+
+    # GitHub Actions 가 배포할 때마다 이 값을 커밋 SHA 태그로 갱신한다.
+    app-image = ""
   }
 
   allow_stopping_for_update = true
+
+  lifecycle {
+    # 배포는 Actions 가 이 값을 바꾸는 방식이다. Terraform 이 매번 ""로 되돌리면 안 된다.
+    ignore_changes = [metadata["app-image"]]
+  }
 }
 # VM 설정 끝
 
@@ -259,7 +328,18 @@ output "ip_1" {
 
 output "registry_1" {
   description = "이미지를 푸시할 곳"
-  value       = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.registry_1.repository_id}"
+  value       = "ghcr.io/${var.github_repo_1}"
+}
+
+# 아래 둘은 GitHub Actions 워크플로에 그대로 들어간다. 비밀이 아니다.
+output "wif_provider_1" {
+  description = "Actions 의 google-github-actions/auth 에 넣을 workload_identity_provider"
+  value       = google_iam_workload_identity_pool_provider.provider_1.name
+}
+
+output "wif_service_account_1" {
+  description = "Actions 가 빌려 쓸 서비스 계정"
+  value       = google_service_account.sa_deploy_1.email
 }
 
 output "ssh_1" {

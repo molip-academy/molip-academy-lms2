@@ -32,3 +32,13 @@ variable "app_1_frontend_origin" {
   description = "app_1 frontend origin"
   default     = "https://molip.sik2.site" // CORS 허용 오리진
 }
+
+variable "github_repo_1" {
+  description = "github_repo_1"
+  default     = "molip-academy/molip-academy-lms2" // 이 저장소에서 온 Actions 토큰만 GCP 에 접근할 수 있다
+}
+
+variable "github_branch_1" {
+  description = "github_branch_1"
+  default     = "main" // 이 브랜치에서만 배포한다
+}

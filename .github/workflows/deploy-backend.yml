@@ -1,0 +1,88 @@
+name: 백엔드 배포
+
+# 백엔드가 바뀔 때만 돈다. 프론트만 고친 커밋으로 서버를 재시작할 이유가 없다.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "back/**"
+      - ".github/workflows/deploy-backend.yml"
+  workflow_dispatch:
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}/app-1
+  INSTANCE: molip-instance-1
+  ZONE: asia-northeast3-a
+  PROJECT: molip-academy-lms
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+      # Workload Identity Federation 이 이 토큰을 GCP 자격증명으로 바꾼다.
+      # 서비스 계정 키 파일을 GitHub Secrets 에 넣지 않는 이유다.
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 테스트
+        run: ./gradlew test --no-daemon
+        working-directory: back
+
+      - name: ghcr 로그인
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 빌드 · 푸시
+        uses: docker/build-push-action@v6
+        with:
+          context: back
+          # GCE 는 amd64 다.
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ github.sha }}
+            ${{ env.IMAGE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: GCP 인증
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: 이미지 태그 갱신
+        # 어떤 이미지를 띄울지는 인스턴스 메타데이터가 정한다.
+        run: |
+          gcloud compute instances add-metadata "$INSTANCE" \
+            --zone "$ZONE" --project "$PROJECT" \
+            --metadata "app-image=${IMAGE}:${GITHUB_SHA}"
+
+      - name: 배포
+        # 컨테이너를 띄우는 방법은 main.tf 의 startup-script 한 곳에만 있다.
+        # 여기서 docker run 을 다시 쓰면 환경변수가 두 곳으로 갈라져 반드시 어긋난다.
+        run: |
+          gcloud compute ssh "$INSTANCE" \
+            --zone "$ZONE" --project "$PROJECT" --tunnel-through-iap \
+            --command "sudo google_metadata_script_runner startup"
+
+      - name: 확인
+        run: |
+          for i in $(seq 1 20); do
+            code=$(curl -sS -m 10 -o /dev/null -w '%{http_code}' https://api.molip.sik2.site/api/v1/csrf || echo 000)
+            echo "시도 $i: HTTP $code"
+            [ "$code" = "204" ] && exit 0
+            sleep 15
+          done
+          echo "백엔드가 응답하지 않습니다."
+          exit 1
