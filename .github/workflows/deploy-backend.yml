@@ -81,12 +81,14 @@ jobs:
             --command "sudo google_metadata_script_runner startup"
 
       - name: 확인
+        # 상태 확인 전용 엔드포인트로 본다. 업무 엔드포인트의 응답 코드는 기능이
+        # 바뀌면 함께 바뀌고, 그때마다 멀쩡한 배포가 실패로 보고된다 — 실제로 그랬다.
         run: |
           for i in $(seq 1 20); do
-            code=$(curl -sS -m 10 -o /dev/null -w '%{http_code}' https://api.molip.sik2.site/api/v1/csrf || echo 000)
-            echo "시도 $i: HTTP $code"
-            [ "$code" = "204" ] && exit 0
+            body=$(curl -sS -m 10 https://api.molip.sik2.site/actuator/health || echo '')
+            echo "시도 $i: $body"
+            case "$body" in *'"status":"UP"'*) exit 0;; esac
             sleep 15
           done
-          echo "백엔드가 응답하지 않습니다."
+          echo "백엔드가 UP 을 보고하지 않습니다."
           exit 1
