@@ -16,14 +16,15 @@ export class ApiError extends Error {
   }
 }
 
-function readCookie(name: string): string | undefined {
-  return document.cookie
-    .split("; ")
-    .find((row) => row.startsWith(`${name}=`))
-    ?.split("=")
-    .slice(1)
-    .join("=");
-}
+/**
+ * CSRF 토큰은 쿠키가 아니라 서버가 본문으로 준 값을 쓴다.
+ *
+ * 쿠키에서 읽으려면 프론트(molip.sik2.site)가 API(api.molip.sik2.site)의 쿠키를
+ * 읽을 수 있어야 하는데, 같은 사이트여도 오리진 단위로 막는 브라우저가 있다.
+ * 검증용 쿠키는 브라우저가 알아서 실어 보내므로, JS 는 값만 알면 된다.
+ */
+let csrfToken: string | null = null;
+let csrfHeader = "X-XSRF-TOKEN";
 
 type Options = {
   method?: string;
@@ -44,9 +45,9 @@ async function request<T>(path: string, options: Options = {}): Promise<T> {
     headers["Content-Type"] = "application/json";
   }
 
-  const csrfToken = readCookie("XSRF-TOKEN");
-  if (csrfToken && method !== "GET") {
-    headers["X-XSRF-TOKEN"] = decodeURIComponent(csrfToken);
+  if (method !== "GET") {
+    if (!csrfToken) await primeCsrf();
+    if (csrfToken) headers[csrfHeader] = csrfToken;
   }
 
   const response = await fetch(`${BASE_URL}${path}`, {
@@ -103,9 +104,17 @@ async function tryRefresh(): Promise<boolean> {
   }
 }
 
-/** 첫 요청 전에 XSRF-TOKEN 쿠키를 받아 둔다. */
+/** 첫 쓰기 요청 전에 CSRF 토큰을 받아 둔다. 쓰기 직전에도 자동으로 불린다. */
 export async function primeCsrf(): Promise<void> {
-  await fetch(`${BASE_URL}/api/v1/csrf`, { credentials: "include" }).catch(() => undefined);
+  try {
+    const response = await fetch(`${BASE_URL}/api/v1/csrf`, { credentials: "include" });
+    if (!response.ok) return;
+    const payload = (await response.json()) as { token?: string; headerName?: string };
+    if (payload.token) csrfToken = payload.token;
+    if (payload.headerName) csrfHeader = payload.headerName;
+  } catch {
+    // 토큰을 못 받아도 여기서 막지 않는다. 실제 요청이 403 으로 알려준다.
+  }
 }
 
 export const api = {

@@ -42,7 +42,7 @@ class OpenApiDisabledTest {
 	@Test
 	@DisplayName("문서가 꺼져도 앱은 정상 동작한다")
 	void appStillWorks() throws Exception {
-		mvc.perform(get("/api/v1/csrf")).andExpect(status().isNoContent());
+		mvc.perform(get("/api/v1/csrf")).andExpect(status().isOk());
 	}
 
 	private static org.hamcrest.Matcher<Integer> not(int status) {
