@@ -3,6 +3,17 @@
 *.env
 !.env.example
 
+# Terraform — state holds secret values in plaintext, tfvars holds them by design
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+.terraform/
+.terraform.lock.hcl
+crash.log
+override.tf
+override.tf.json
+
 # Local databases
 *.mv.db
 *.trace.db
