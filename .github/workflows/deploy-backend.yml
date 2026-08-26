@@ -40,6 +40,10 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # 기본 docker 드라이버는 캐시 내보내기를 못 한다. 아래 build-push-action 이
+      # type=gha 캐시를 쓰므로 containerd 기반 빌더가 필요하다.
+      - uses: docker/setup-buildx-action@v3
+
       - name: 빌드 · 푸시
         uses: docker/build-push-action@v6
         with:
