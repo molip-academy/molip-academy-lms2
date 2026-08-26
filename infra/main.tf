@@ -260,6 +260,7 @@ if [ -n "$APP_IMAGE" ]; then
     -e 'JWT_SECRET=${var.jwt_secret_1}' \
     -e 'COOKIE_SAME_SITE=Lax' \
     -e 'COOKIE_SECURE=true' \
+    -e 'COOKIE_DOMAIN=${var.app_1_cookie_domain}' \
     -e 'CORS_ALLOWED_ORIGINS=${var.app_1_frontend_origin}' \
     -e 'TZ=Asia/Seoul' \
     -e 'JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=45' \

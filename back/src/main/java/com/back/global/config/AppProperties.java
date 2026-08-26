@@ -12,7 +12,12 @@ public record AppProperties(Jwt jwt, Cookie cookie, Cors cors) {
 
 	public record Jwt(String secret, long accessTokenValiditySeconds, long refreshTokenValiditySeconds) {}
 
-	public record Cookie(String sameSite, boolean secure) {}
+	/**
+	 * domain 이 비어 있으면 쿠키가 그 호스트에만 묶인다(로컬 개발).
+	 * 프론트와 백엔드가 서로 다른 서브도메인이면, 상위 도메인을 지정해야
+	 * 프론트의 JS 가 XSRF-TOKEN 을 읽어 헤더로 되돌려줄 수 있다.
+	 */
+	public record Cookie(String sameSite, boolean secure, String domain) {}
 
 	public record Cors(List<String> allowedOrigins) {}
 }

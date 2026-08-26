@@ -20,10 +20,12 @@ public class AuthCookies {
 
 	private final String sameSite;
 	private final boolean secure;
+	private final String domain;
 
 	public AuthCookies(AppProperties properties) {
 		this.sameSite = properties.cookie().sameSite();
 		this.secure = properties.cookie().secure();
+		this.domain = properties.cookie().domain();
 	}
 
 	public void setAccessToken(HttpHeaders headers, String token, long maxAgeSeconds) {
@@ -51,12 +53,17 @@ public class AuthCookies {
 	}
 
 	private ResponseCookie build(String name, String value, long maxAgeSeconds) {
-		return ResponseCookie.from(name, value)
+		var cookie = ResponseCookie.from(name, value)
 				.httpOnly(true)
 				.secure(secure)
 				.sameSite(sameSite)
 				.path("/")
-				.maxAge(maxAgeSeconds)
-				.build();
+				.maxAge(maxAgeSeconds);
+
+		// 비어 있으면 지정하지 않는다 — 그래야 발급한 호스트에만 묶인다.
+		if (domain != null && !domain.isBlank()) {
+			cookie.domain(domain);
+		}
+		return cookie.build();
 	}
 }

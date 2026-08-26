@@ -16,6 +16,9 @@ app:
   cookie:
     same-site: ${COOKIE_SAME_SITE:Lax}
     secure: ${COOKIE_SECURE:false}
+    # 비워 두면 쿠키가 발급한 호스트에만 묶인다. 프론트와 백엔드가 서브도메인으로
+    # 갈리면 상위 도메인을 넣어야 XSRF-TOKEN 을 프론트에서 읽을 수 있다.
+    domain: ${COOKIE_DOMAIN:}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
 

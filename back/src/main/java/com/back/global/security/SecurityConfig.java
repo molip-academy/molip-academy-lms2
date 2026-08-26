@@ -46,10 +46,17 @@ public class SecurityConfig {
 			throws Exception {
 
 		var csrfRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
-		csrfRepository.setCookieCustomizer(cookie -> cookie
-				.sameSite(properties.cookie().sameSite())
-				.secure(properties.cookie().secure())
-				.path("/"));
+		csrfRepository.setCookieCustomizer(cookie -> {
+			cookie.sameSite(properties.cookie().sameSite())
+					.secure(properties.cookie().secure())
+					.path("/");
+			// 프론트의 JS 가 이 쿠키를 읽어 X-XSRF-TOKEN 헤더로 되돌려준다.
+			// 서브도메인이 갈리면 상위 도메인을 지정해야 읽을 수 있다.
+			var domain = properties.cookie().domain();
+			if (domain != null && !domain.isBlank()) {
+				cookie.domain(domain);
+			}
+		});
 
 		// SPA는 쿠키에서 읽은 값을 그대로 헤더에 실으므로 BREACH 마스킹을 쓰지 않는다.
 		var csrfHandler = new CsrfTokenRequestAttributeHandler();
