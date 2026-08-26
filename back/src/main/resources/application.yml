@@ -26,3 +26,16 @@ springdoc:
     enabled: false
   swagger-ui:
     enabled: false
+
+# 상태 확인용 엔드포인트. health 하나만 연다.
+# env·beans·heapdump 같은 것들은 공개되면 설정값과 메모리 내용이 그대로 새어 나간다.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      # 공개 엔드포인트라 상세는 감춘다. DB 종류·버전·디스크 용량까지 드러낼 이유가 없다.
+      show-details: never
+      show-components: never

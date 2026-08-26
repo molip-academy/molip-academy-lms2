@@ -64,6 +64,9 @@ public class SecurityConfig {
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authorizeHttpRequests(auth -> auth
 						.requestMatchers("/h2-console/**").permitAll()
+						// 상태 확인은 인증 없이 열어 둔다. 배포 파이프라인과 사람이 둘 다 본다.
+						// 노출되는 엔드포인트는 health 하나뿐이고 상세는 감춰져 있다.
+						.requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
 						// API 문서 경로. springdoc이 꺼진 프로파일에서는 핸들러 자체가 등록되지 않아
 						// 이 허용이 있어도 문서가 나가지 않는다(포워딩된 /error가 401을 낸다).
 						.requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
